@@ -2,6 +2,7 @@ import os
 import json
 from string import Template
 from datetime import datetime
+from pprint import pprint
 from aiohttp import web
 
 
@@ -9,20 +10,23 @@ from collections import defaultdict
 
 
 async def hello(request):
-    return web.Response(text=TEXT, content_type="text/html")
+    return web.Response(text=get_text(), content_type="text/html")
 
 
-INTRO_TEXT = """
+def get_text():
+    prev_answers = render_responses()
+
+    INTRO_TEXT = """
 welcome to my antisocial counter.
 
 
-i believe i am the object of a cyberattack, that happened some time ago.
+i believe i am the object of a social network hack, that happened some time ago.
 
 to test my theory, this is an anonymous question/poll 
 
-"""
+    """
 
-TEXT = f""" 
+    TEXT = f""" 
 <html>
 <script>
 
@@ -39,12 +43,14 @@ hi
 
 <!--<form action="/post" method="POST"> -->
 <form action="/post" method="POST"> 
-Question 1: Have you or your family/friends/work/network been approached, contacted 
-or interacted with by anyone claiming to be speaking on my or my network's behalf, 
-running a study, running an investigation, running surveillance, running probation, running an
-experiment, from the press, from the police, from the intelligence services, 
-whether this was directly or indirectly, outright or implied via contact physical, 
-electronic or online? 
+Question 1: Have you or your network been approached, contacted 
+or interacted with by anyone claiming to be speaking on my or my 
+network's behalf? Maybe running a study, running an investigation, 
+running surveillance, running probation, running an
+experiment, perhaps from the press, from the police, from the intelligence 
+services, or any other organisation or individual whether this was 
+directly or indirectly, outright or implied via contact that was 
+physical, electronic or online? 
 
 This may have been over the last 12 years.
 
@@ -53,27 +59,32 @@ This may have been over the last 12 years.
 <input type=radio name="q1no">No. Absolutely not. No way. Never. How would it work?</input>
 
 
-Question 2: Do you suspect whether you have been the subject of such a cyberattack also.
+Question 2: Do you suspect whether you have also been the target of
+such an hack.
 
 <input type=radio name="q2yes">Yes.</input>
 <input type=radio name="q2no">No. Absolutely not. No way. Never. How would it work?</input>
 
 
-If not, move on and don't look back!
-
-Optional:
 Message:
 <textarea name=message size=15 rows=5 cols=30> </textarea>
 <label> Show message to all <input type=checkbox name="message_public"></input> </label>
 <!--<input type=submit onclick="doclick();"></input>-->
-<input type=submit></input>
+<input type=submit value="Submit"></input>
 </form>
 
+
+
+
+
+
+Previous answers:
+{prev_answers}
 </pre>
 
 </html>
-"""
-
+    """
+    return TEXT
 
 def log_response(answers, date, message, message_public):
     date_j = json.dumps(date)
@@ -97,6 +108,9 @@ def get_responses():
 
     if not os.path.exists(log_name):
         return {}, {}
+
+    with open('data.log', 'r') as f:
+        data = f.read()
 
     for line in data.split("\n"):
         line = line.strip()
@@ -135,11 +149,18 @@ def get_responses():
 
 def render_responses():
     r, fr = get_responses()        
-    t = Template("""
-    
-     {$r}
+    lines = [json.dumps(afr) for afr in fr]
+    fr = "\n".join(lines)
 
-     {$fr} 
+    t = Template("""
+
+Totals:    
+
+$r
+
+Responses:
+
+$fr 
 """)
     return t.substitute(r=r, fr=fr)
 
@@ -162,8 +183,5 @@ app.add_routes([web.get("/", hello),
 
 #get_responses()
 print(render_responses())
-web.run_app(app)
-
-    with open('data.log', 'r') as f:
-        data = f.read()
-
+web.run_app(app, port=80)
+#web.run_app(app )
